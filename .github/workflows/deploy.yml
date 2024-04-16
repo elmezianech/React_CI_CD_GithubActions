@@ -1,0 +1,42 @@
+name: Deploy Budget Calculator
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      # Check if deployment branch exists
+      - name: Check for deployment branch
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.sha }}  # Fetch entire commit history
+          fetch-depth: 0  # Retrieve all branches
+
+      - name: Create deployment branch (if needed)
+        run: |
+          git branch -m "Create deployment branch" deployment || true  # Attempt branch creation, ignore failure
+        if: steps.check-for-deployment-branch.outputs == false  # Only run if branch doesn't exist
+
+      - name: Use Node.js 16
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Install dependencies
+        run: npm ci
+      - name: Build the app
+        run: npm run build
+      - name: Deploy the app
+        uses: JamesIves/github-pages-deploy-action@v4.5.0
+        with:
+          token: ${{ secrets.DEPLOY_KEY }}  # Replace with your deploy key secret
+          branch: gh-pages
+          folder: ./build
+
+permissions:
+  contents: write
